@@ -79,6 +79,37 @@ mvn clean install -P *profile_name*
 
 # Documentation
 
+# deployment (manual)
+
+This repo is deployed as an Cloud Run service in the same Google Cloud project as the intranet.
+
+## One-time setup
+
+```
+gcloud auth login
+gcloud config set project intranet-483419
+```
+
+## Build + deploy (Cloud Run)
+
+```
+PROJECT_ID="intranet-483419"
+IMAGE="gcr.io/${PROJECT_ID}/dss-validation-service:latest"
+REGION="europe-west1"
+SERVICE="dss-validation"
+
+gcloud builds submit --tag "${IMAGE}"
+
+gcloud run deploy "${SERVICE}" \
+  --image "${IMAGE}" \
+  --region "${REGION}" \
+  --no-allow-unauthenticated \
+  --set-env-vars DSS_REQUIRE_AUTH=true,DSS_VERIFY_GOOGLE_TOKEN=true,DSS_AUTH_AUDIENCE=https://YOUR_CLOUD_RUN_URL,DSS_TRUST_LIST_REFRESH_ON_START=true,DSS_TRUST_LIST_REFRESH_INTERVAL_MINUTES=1440
+```
+
+Notes:
+- Replace `YOUR_CLOUD_RUN_URL` with the final service URL (used as the ID token audience).
+
 The [documentation](dss-cookbook/src/main/asciidoc/dss-documentation.adoc) and samples are available in the dss-cookbook module. [SoapUI project](dss-cookbook/src/main/soapui) and [Postman project](dss-cookbook/src/main/postman) are also provided to illustrate SOAP/REST calls.
 
 In order to build the documentation by yourself, the following command must be executed in *dss-cookbook* module:
@@ -112,3 +143,4 @@ The DSS project is delivered under the terms of the Lesser General Public Licens
 SPDX-License-Identifier : LGPL-2.1
 
 [![SonarCloud](https://sonarcloud.io/api/project_badges/measure?project=eu.europa.ec.joinup.sd-dss%3Asd-dss&metric=alert_status)](https://sonarcloud.io/dashboard?id=eu.europa.ec.joinup.sd-dss%3Asd-dss)
+`r`n## Cleverbase build shortcut`r`n`r`nBuild + push the Cloud Run image used by the intranet:`r`n`r`n```powershell`r`n.\build-image.ps1`r`n```

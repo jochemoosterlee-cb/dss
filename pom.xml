@@ -170,6 +170,7 @@
 		<module>dss-validation-soap-client</module>
 		<module>dss-validation-rest</module>
 		<module>dss-validation-soap</module>
+		<module>dss-validation-service</module>
 		<module>dss-certificate-validation-dto</module>
 		<module>dss-certificate-validation-common</module>
 		<module>dss-certificate-validation-rest-client</module>

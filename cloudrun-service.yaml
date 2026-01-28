@@ -1,0 +1,22 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: dss-validation
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/intranet-483419/dss-validation-service:latest
+          env:
+            - name: DSS_REQUIRE_AUTH
+              value: "true"
+            - name: DSS_VERIFY_GOOGLE_TOKEN
+              value: "true"
+            - name: DSS_AUTH_AUDIENCE
+              value: "https://YOUR_CLOUD_RUN_URL"
+            - name: DSS_TRUST_LIST_REFRESH_ON_START
+              value: "true"
+            - name: DSS_TRUST_LIST_REFRESH_INTERVAL_MINUTES
+              value: "1440"
+          ports:
+            - containerPort: 8080
