@@ -15,8 +15,8 @@ public class ValidationRequestOptions {
 
 	public static ValidationRequestOptions from(String mode, String policy, String requireRevocation, String trustList) {
 		String resolvedMode = normalize(mode, "summary");
-		if (!"summary".equalsIgnoreCase(resolvedMode)) {
-			throw new ValidationException(400, "Unsupported mode. Only 'summary' is allowed.");
+		if (!"summary".equalsIgnoreCase(resolvedMode) && !"full".equalsIgnoreCase(resolvedMode)) {
+			throw new ValidationException(400, "Unsupported mode. Only 'summary' or 'full' is allowed.");
 		}
 
 		String resolvedPolicy = normalize(policy, "default");

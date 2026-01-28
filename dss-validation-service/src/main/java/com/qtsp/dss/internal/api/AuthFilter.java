@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qtsp.dss.internal.app.AppContext;
 import com.qtsp.dss.internal.app.ServiceConfig;
-import com.qtsp.dss.internal.model.ValidationSummaryResponse;
+import com.qtsp.dss.internal.model.ValidationReportsBundleResponse;
 
 import javax.annotation.Priority;
 import javax.ws.rs.Priorities;
@@ -77,7 +77,7 @@ public class AuthFilter implements ContainerRequestFilter {
 	}
 
 	private void abort(ContainerRequestContext requestContext, String message) {
-		ValidationSummaryResponse response = ValidationSummaryResponse.indeterminateWithError(message);
+		ValidationReportsBundleResponse response = ValidationReportsBundleResponse.errorWithMessage(message);
 		requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
 				.type(MediaType.APPLICATION_JSON)
 				.entity(response)

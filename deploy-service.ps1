@@ -7,6 +7,7 @@ $Image = "gcr.io/$ProjectId/dss-validation-service:latest"
 $Cpu = "1"
 $Memory = "4Gi"
 $Timeout = "300"
+$MinInstances = "1"
 
 Write-Host "Deploying $Service from $Image"
 
@@ -16,6 +17,7 @@ gcloud run deploy $Service `
   --cpu $Cpu `
   --memory $Memory `
   --timeout $Timeout `
+  --min-instances $MinInstances `
   --set-env-vars DSS_TRUST_LIST_REFRESH_ON_START=false,DSS_TRUST_LIST_REFRESH_INTERVAL_MINUTES=0 `
   --no-allow-unauthenticated
 

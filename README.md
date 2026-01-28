@@ -110,6 +110,19 @@ gcloud run deploy "${SERVICE}" \
 Notes:
 - Replace `YOUR_CLOUD_RUN_URL` with the final service URL (used as the ID token audience).
 
+## LOTL keystore (EU trust lists)
+
+The EU LOTL signature check requires a keystore with the LOTL signing certificates. The service loads this from
+classpath and applies it to `LOTLSource` (including pivot support).
+
+Defaults (override with env vars):
+
+- `DSS_LOTL_KEYSTORE_RESOURCE=keystore.p12`
+- `DSS_LOTL_KEYSTORE_PASSWORD=dss-password`
+- `DSS_OJ_URL=https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG`
+
+If the keystore is missing or outdated, the LOTL may show "The trusted list is not well signed!" in reports.
+
 The [documentation](dss-cookbook/src/main/asciidoc/dss-documentation.adoc) and samples are available in the dss-cookbook module. [SoapUI project](dss-cookbook/src/main/soapui) and [Postman project](dss-cookbook/src/main/postman) are also provided to illustrate SOAP/REST calls.
 
 In order to build the documentation by yourself, the following command must be executed in *dss-cookbook* module:

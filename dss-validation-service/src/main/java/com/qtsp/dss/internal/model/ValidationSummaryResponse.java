@@ -9,6 +9,10 @@ public class ValidationSummaryResponse {
 	private int signatureCount;
 	private List<SignatureSummary> signatures = new ArrayList<>();
 	private List<String> errors = new ArrayList<>();
+	private String simpleReportXml;
+	private String detailedReportXml;
+	private String diagnosticDataXml;
+	private String etsiValidationReportXml;
 
 	public ValidationSummaryResponse() {
 		// jackson
@@ -63,5 +67,37 @@ public class ValidationSummaryResponse {
 
 	public void setErrors(List<String> errors) {
 		this.errors = errors;
+	}
+
+	public String getSimpleReportXml() {
+		return simpleReportXml;
+	}
+
+	public void setSimpleReportXml(String simpleReportXml) {
+		this.simpleReportXml = simpleReportXml;
+	}
+
+	public String getDetailedReportXml() {
+		return detailedReportXml;
+	}
+
+	public void setDetailedReportXml(String detailedReportXml) {
+		this.detailedReportXml = detailedReportXml;
+	}
+
+	public String getDiagnosticDataXml() {
+		return diagnosticDataXml;
+	}
+
+	public void setDiagnosticDataXml(String diagnosticDataXml) {
+		this.diagnosticDataXml = diagnosticDataXml;
+	}
+
+	public String getEtsiValidationReportXml() {
+		return etsiValidationReportXml;
+	}
+
+	public void setEtsiValidationReportXml(String etsiValidationReportXml) {
+		this.etsiValidationReportXml = etsiValidationReportXml;
 	}
 }

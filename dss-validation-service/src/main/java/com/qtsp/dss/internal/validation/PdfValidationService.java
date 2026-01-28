@@ -19,9 +19,12 @@ import eu.europa.esig.dss.service.http.commons.FileCacheDataLoader;
 import eu.europa.esig.dss.service.ocsp.OnlineOCSPSource;
 import eu.europa.esig.dss.simplereport.SimpleReport;
 import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource;
+import eu.europa.esig.dss.spi.x509.CertificateSource;
+import eu.europa.esig.dss.spi.x509.KeyStoreCertificateSource;
 import eu.europa.esig.dss.spi.validation.CertificateVerifier;
 import eu.europa.esig.dss.spi.validation.CertificateVerifierBuilder;
 import eu.europa.esig.dss.spi.validation.CommonCertificateVerifier;
+import eu.europa.esig.dss.tsl.function.OfficialJournalSchemeInformationURI;
 import eu.europa.esig.dss.tsl.job.TLValidationJob;
 import eu.europa.esig.dss.tsl.source.LOTLSource;
 import eu.europa.esig.dss.tsl.source.TLSource;
@@ -32,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import eu.europa.esig.dss.alert.LogOnStatusAlert;
 
+import java.io.InputStream;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -39,6 +43,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 public class PdfValidationService {
 	private static final Logger LOG = LoggerFactory.getLogger(PdfValidationService.class);
@@ -63,6 +68,19 @@ public class PdfValidationService {
 	}
 
 	public ValidationSummaryResponse validate(byte[] pdfBytes, String filename, ValidationRequestOptions options) {
+		Reports reports = runValidation(pdfBytes, filename);
+		return mapSummary(reports, options);
+	}
+
+	public Reports validateReports(byte[] pdfBytes, String filename, ValidationRequestOptions options) {
+		return runValidation(pdfBytes, filename);
+	}
+
+	public ValidationSummaryResponse summarizeReports(Reports reports, ValidationRequestOptions options) {
+		return mapSummary(reports, options);
+	}
+
+	private Reports runValidation(byte[] pdfBytes, String filename) {
 		if (pdfBytes == null || pdfBytes.length == 0) {
 			throw new ValidationException(400, "Missing PDF file");
 		}
@@ -82,7 +100,7 @@ public class PdfValidationService {
 			throw new ValidationException(500, "Validation failed: " + e.getMessage());
 		}
 
-		return mapSummary(reports, options);
+		return reports;
 	}
 
 	private ValidationSummaryResponse mapSummary(Reports reports, ValidationRequestOptions options) {
@@ -277,6 +295,15 @@ public class PdfValidationService {
 			offlineLoader.setCacheExpirationTime(-1);
 			LOTLSource lotlSource = new LOTLSource();
 			lotlSource.setUrl(config.getLotlUrl());
+			CertificateSource lotlCertificateSource = loadLotlCertificateSource();
+			if (lotlCertificateSource != null) {
+				lotlSource.setCertificateSource(lotlCertificateSource);
+			}
+			if (config.getOjUrl() != null && !config.getOjUrl().trim().isEmpty()) {
+				lotlSource.setSigningCertificatesAnnouncementPredicate(new OfficialJournalSchemeInformationURI(config.getOjUrl()));
+			}
+			lotlSource.setPivotSupport(true);
+			lotlSource.setTLVersions(Arrays.asList(5, 6));
 
 			TLSource nlSource = new TLSource();
 			nlSource.setUrl(config.getNlTlUrl());
@@ -321,5 +348,24 @@ public class PdfValidationService {
 			return null;
 		}
 		return ISO_INSTANT.format(instant);
+	}
+
+	private CertificateSource loadLotlCertificateSource() {
+		String resource = config.getLotlKeystoreResource();
+		if (resource == null || resource.trim().isEmpty()) {
+			LOG.warn("LOTL keystore resource not configured.");
+			return null;
+		}
+		try (InputStream stream = PdfValidationService.class.getClassLoader().getResourceAsStream(resource)) {
+			if (stream == null) {
+				LOG.warn("LOTL keystore resource '{}' not found on classpath.", resource);
+				return null;
+			}
+			char[] password = config.getLotlKeystorePassword().toCharArray();
+			return new KeyStoreCertificateSource(stream, "PKCS12", password);
+		} catch (Exception e) {
+			LOG.warn("Failed to load LOTL keystore: {}", e.getMessage());
+			return null;
+		}
 	}
 }

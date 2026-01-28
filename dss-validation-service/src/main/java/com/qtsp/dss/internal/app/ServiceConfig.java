@@ -8,12 +8,15 @@ public final class ServiceConfig {
 	private final String authAudience;
 	private final String lotlUrl;
 	private final String nlTlUrl;
+	private final String ojUrl;
+	private final String lotlKeystoreResource;
+	private final String lotlKeystorePassword;
 	private final boolean trustListRefreshOnStart;
 	private final int trustListRefreshIntervalMinutes;
 
 	private ServiceConfig(int port, int maxUploadBytes, boolean requireAuth, boolean verifyGoogleToken,
-					  String authAudience, String lotlUrl, String nlTlUrl, boolean trustListRefreshOnStart,
-					  int trustListRefreshIntervalMinutes) {
+					  String authAudience, String lotlUrl, String nlTlUrl, String ojUrl, String lotlKeystoreResource,
+					  String lotlKeystorePassword, boolean trustListRefreshOnStart, int trustListRefreshIntervalMinutes) {
 		this.port = port;
 		this.maxUploadBytes = maxUploadBytes;
 		this.requireAuth = requireAuth;
@@ -21,6 +24,9 @@ public final class ServiceConfig {
 		this.authAudience = authAudience;
 		this.lotlUrl = lotlUrl;
 		this.nlTlUrl = nlTlUrl;
+		this.ojUrl = ojUrl;
+		this.lotlKeystoreResource = lotlKeystoreResource;
+		this.lotlKeystorePassword = lotlKeystorePassword;
 		this.trustListRefreshOnStart = trustListRefreshOnStart;
 		this.trustListRefreshIntervalMinutes = trustListRefreshIntervalMinutes;
 	}
@@ -33,10 +39,13 @@ public final class ServiceConfig {
 		String authAudience = trimToNull(getEnv("DSS_AUTH_AUDIENCE"));
 		String lotlUrl = getOrDefault("DSS_LOTL_URL", "https://ec.europa.eu/tools/lotl/eu-lotl.xml");
 		String nlTlUrl = getOrDefault("DSS_TL_NL_URL", "https://download.eidasa.europa.eu/tsl/tsl-NL.xml");
+		String ojUrl = getOrDefault("DSS_OJ_URL", "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG");
+		String lotlKeystoreResource = getOrDefault("DSS_LOTL_KEYSTORE_RESOURCE", "keystore.p12");
+		String lotlKeystorePassword = getOrDefault("DSS_LOTL_KEYSTORE_PASSWORD", "dss-password");
 		boolean trustListRefreshOnStart = parseBoolean(getEnv("DSS_TRUST_LIST_REFRESH_ON_START"), false);
 		int trustListRefreshIntervalMinutes = parseInt(getEnv("DSS_TRUST_LIST_REFRESH_INTERVAL_MINUTES"), 0);
 		return new ServiceConfig(port, maxUploadBytes, requireAuth, verifyGoogleToken, authAudience, lotlUrl, nlTlUrl,
-				trustListRefreshOnStart, trustListRefreshIntervalMinutes);
+				ojUrl, lotlKeystoreResource, lotlKeystorePassword, trustListRefreshOnStart, trustListRefreshIntervalMinutes);
 	}
 
 	public int getPort() {
@@ -65,6 +74,18 @@ public final class ServiceConfig {
 
 	public String getNlTlUrl() {
 		return nlTlUrl;
+	}
+
+	public String getOjUrl() {
+		return ojUrl;
+	}
+
+	public String getLotlKeystoreResource() {
+		return lotlKeystoreResource;
+	}
+
+	public String getLotlKeystorePassword() {
+		return lotlKeystorePassword;
 	}
 
 	public boolean isTrustListRefreshOnStart() {

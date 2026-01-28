@@ -2,10 +2,11 @@ package com.qtsp.dss.internal.api;
 
 import com.qtsp.dss.internal.app.AppContext;
 import com.qtsp.dss.internal.app.ServiceConfig;
-import com.qtsp.dss.internal.model.ValidationSummaryResponse;
+import com.qtsp.dss.internal.model.ValidationReportsBundleResponse;
 import com.qtsp.dss.internal.validation.PdfValidationService;
 import com.qtsp.dss.internal.validation.ValidationException;
 import com.qtsp.dss.internal.validation.ValidationRequestOptions;
+import eu.europa.esig.dss.validation.reports.Reports;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
@@ -47,23 +48,30 @@ public class ValidationResource {
 
 			ValidationRequestOptions options = ValidationRequestOptions.from(mode, policy, requireRevocation, trustList);
 			PdfValidationService validationService = AppContext.getValidationService();
-			ValidationSummaryResponse response = validationService.validate(bytes, filename, options);
+			Reports reports = validationService.validateReports(bytes, filename, options);
+			ValidationReportsBundleResponse response = new ValidationReportsBundleResponse();
+			response.setSimpleReportXml(reports.getXmlSimpleReport());
+			response.setDetailedReportXml(reports.getXmlDetailedReport());
+			response.setDiagnosticDataXml(reports.getXmlDiagnosticData());
+			if (reports.getEtsiValidationReportJaxb() != null) {
+				response.setEtsiValidationReportXml(reports.getXmlValidationReport());
+			}
 			return Response.ok(response).build();
 		} catch (ValidationException e) {
-			ValidationSummaryResponse response = ValidationSummaryResponse.indeterminateWithError(e.getMessage());
+			ValidationReportsBundleResponse response = ValidationReportsBundleResponse.errorWithMessage(e.getMessage());
 			return Response.status(e.getStatusCode()).type(MediaType.APPLICATION_JSON).entity(response).build();
 		} catch (Exception e) {
-			ValidationSummaryResponse response = ValidationSummaryResponse.indeterminateWithError("Internal error");
+			ValidationReportsBundleResponse response = ValidationReportsBundleResponse.errorWithMessage("Internal error");
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.APPLICATION_JSON).entity(response).build();
 		} catch (Throwable t) {
 			String message = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
-			ValidationSummaryResponse response = ValidationSummaryResponse.indeterminateWithError(message);
+			ValidationReportsBundleResponse response = ValidationReportsBundleResponse.errorWithMessage(message);
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.APPLICATION_JSON).entity(response).build();
 		}
 	}
 
 	private Response badRequest(String message) {
-		ValidationSummaryResponse response = ValidationSummaryResponse.indeterminateWithError(message);
+		ValidationReportsBundleResponse response = ValidationReportsBundleResponse.errorWithMessage(message);
 		return Response.status(Response.Status.BAD_REQUEST).type(MediaType.APPLICATION_JSON).entity(response).build();
 	}
 
