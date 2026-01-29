@@ -18,5 +18,7 @@ spec:
               value: "true"
             - name: DSS_TRUST_LIST_REFRESH_INTERVAL_MINUTES
               value: "1440"
+            - name: DSS_TL_CACHE_DIR
+              value: "/tmp/dss-tsl-cache"
           ports:
             - containerPort: 8080

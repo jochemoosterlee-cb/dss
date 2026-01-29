@@ -12,6 +12,7 @@ import eu.europa.esig.dss.enumerations.Indication;
 import eu.europa.esig.dss.enumerations.MimeTypeEnum;
 import eu.europa.esig.dss.enumerations.SignatureLevel;
 import eu.europa.esig.dss.model.InMemoryDocument;
+import eu.europa.esig.dss.model.tsl.TLValidationJobSummary;
 import eu.europa.esig.dss.pades.validation.PDFDocumentValidator;
 import eu.europa.esig.dss.service.crl.OnlineCRLSource;
 import eu.europa.esig.dss.service.http.commons.CommonsDataLoader;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import eu.europa.esig.dss.alert.LogOnStatusAlert;
 
+import java.io.File;
 import java.io.InputStream;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -44,6 +46,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Arrays;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class PdfValidationService {
 	private static final Logger LOG = LoggerFactory.getLogger(PdfValidationService.class);
@@ -57,6 +63,15 @@ public class PdfValidationService {
 	private volatile Instant lastTrustListRefreshAttemptAt;
 	private volatile Instant lastTrustListRefreshSuccessAt;
 	private volatile String lastTrustListRefreshError;
+	private volatile Instant trustListRefreshStartedAt;
+	private volatile Instant trustListRefreshProgressAt;
+	private volatile String trustListRefreshPhase;
+	private volatile Integer lastProcessedLotlCount;
+	private volatile Integer lastProcessedTlCount;
+	private volatile Integer totalLotlCountEstimate;
+	private volatile Integer totalTlCountEstimate;
+	private final ScheduledExecutorService refreshProgressExecutor = Executors.newSingleThreadScheduledExecutor();
+	private volatile ScheduledFuture<?> refreshProgressTask;
 
 	public PdfValidationService(ServiceConfig config) {
 		this.config = config;
@@ -287,12 +302,21 @@ public class PdfValidationService {
 	public synchronized void refreshTrustLists() {
 		trustListRefreshInProgress = true;
 		lastTrustListRefreshAttemptAt = Instant.now();
+		trustListRefreshStartedAt = lastTrustListRefreshAttemptAt;
+		trustListRefreshProgressAt = lastTrustListRefreshAttemptAt;
+		trustListRefreshPhase = "starting";
 		lastTrustListRefreshError = null;
+		setTotalCountsFromSummary(trustedListsCertificateSource.getSummary());
 		try {
 			CommonsDataLoader dataLoader = new CommonsDataLoader();
 			FileCacheDataLoader onlineLoader = new FileCacheDataLoader(dataLoader);
 			FileCacheDataLoader offlineLoader = new FileCacheDataLoader(dataLoader);
 			offlineLoader.setCacheExpirationTime(-1);
+			File cacheDir = resolveTrustListCacheDir();
+			if (cacheDir != null) {
+				onlineLoader.setFileCacheDirectory(cacheDir);
+				offlineLoader.setFileCacheDirectory(cacheDir);
+			}
 			LOTLSource lotlSource = new LOTLSource();
 			lotlSource.setUrl(config.getLotlUrl());
 			CertificateSource lotlCertificateSource = loadLotlCertificateSource();
@@ -315,18 +339,32 @@ public class PdfValidationService {
 			job.setOnlineDataLoader(onlineLoader);
 			job.setOfflineDataLoader(offlineLoader);
 
+			trustListRefreshPhase = "downloading";
+			trustListRefreshProgressAt = Instant.now();
+			startProgressTracking(cacheDir);
 			job.onlineRefresh();
+			trustListRefreshPhase = "summarizing";
+			trustListRefreshProgressAt = Instant.now();
+			TLValidationJobSummary summary = job.getSummary();
+			lastProcessedLotlCount = summary != null ? summary.getNumberOfProcessedLOTLs() : null;
+			lastProcessedTlCount = summary != null ? summary.getNumberOfProcessedTLs() : null;
+			setTotalCountsFromSummary(summary);
 			trustedListsCertificateSource.setSummary(job.getSummary());
 			baseVerifier.setTrustedCertSources(trustedListsCertificateSource);
 			trustListRefreshFailed = false;
 			lastTrustListRefreshSuccessAt = Instant.now();
+			trustListRefreshPhase = "done";
+			trustListRefreshProgressAt = lastTrustListRefreshSuccessAt;
 			LOG.info("Trust lists refreshed. Trusted entities: {}", trustedListsCertificateSource.getNumberOfTrustedEntityKeys());
 		} catch (Exception e) {
 			trustListRefreshFailed = true;
 			lastTrustListRefreshError = e.getMessage();
+			trustListRefreshPhase = "failed";
+			trustListRefreshProgressAt = Instant.now();
 			LOG.warn("Trust list refresh failed: {}", e.getMessage());
 		} finally {
 			trustListRefreshInProgress = false;
+			stopProgressTracking();
 		}
 	}
 
@@ -340,6 +378,13 @@ public class PdfValidationService {
 		status.setLastRefreshAttemptAt(formatInstant(lastTrustListRefreshAttemptAt));
 		status.setLastRefreshSuccessAt(formatInstant(lastTrustListRefreshSuccessAt));
 		status.setLastRefreshError(lastTrustListRefreshError);
+		status.setRefreshStartedAt(formatInstant(trustListRefreshStartedAt));
+		status.setLastProgressAt(formatInstant(trustListRefreshProgressAt));
+		status.setRefreshPhase(trustListRefreshPhase);
+		status.setProcessedLotlCount(lastProcessedLotlCount);
+		status.setProcessedTlCount(lastProcessedTlCount);
+		status.setTotalLotlCountEstimate(totalLotlCountEstimate);
+		status.setTotalTlCountEstimate(totalTlCountEstimate);
 		return status;
 	}
 
@@ -366,6 +411,89 @@ public class PdfValidationService {
 		} catch (Exception e) {
 			LOG.warn("Failed to load LOTL keystore: {}", e.getMessage());
 			return null;
+		}
+	}
+
+	private File resolveTrustListCacheDir() {
+		String dir = config.getTrustListCacheDir();
+		if (dir == null || dir.trim().isEmpty()) {
+			return null;
+		}
+		File cacheDir = new File(dir);
+		if (cacheDir.exists()) {
+			return cacheDir;
+		}
+		if (cacheDir.mkdirs()) {
+			LOG.info("TL cache directory: {}", cacheDir.getAbsolutePath());
+			return cacheDir;
+		}
+		LOG.warn("Unable to create TL cache directory: {}", cacheDir.getAbsolutePath());
+		return null;
+	}
+
+	private void setTotalCountsFromSummary(TLValidationJobSummary summary) {
+		if (summary == null) {
+			return;
+		}
+		totalLotlCountEstimate = summary.getNumberOfProcessedLOTLs();
+		totalTlCountEstimate = summary.getNumberOfProcessedTLs();
+	}
+
+	private void startProgressTracking(File cacheDir) {
+		if (cacheDir == null || refreshProgressTask != null) {
+			return;
+		}
+		refreshProgressTask = refreshProgressExecutor.scheduleAtFixedRate(() -> {
+			try {
+				ProgressCounts counts = countCachedTrustLists(cacheDir);
+				if (counts != null) {
+					lastProcessedLotlCount = counts.lotlCount;
+					lastProcessedTlCount = counts.tlCount;
+					trustListRefreshProgressAt = Instant.now();
+				}
+			} catch (Exception e) {
+				LOG.debug("Progress tracking failed: {}", e.getMessage());
+			}
+		}, 1, 2, TimeUnit.SECONDS);
+	}
+
+	private void stopProgressTracking() {
+		ScheduledFuture<?> task = refreshProgressTask;
+		if (task != null) {
+			task.cancel(false);
+			refreshProgressTask = null;
+		}
+	}
+
+	private ProgressCounts countCachedTrustLists(File cacheDir) {
+		if (!cacheDir.exists()) {
+			return null;
+		}
+		File[] files = cacheDir.listFiles();
+		if (files == null) {
+			return null;
+		}
+		int lotl = 0;
+		int tl = 0;
+		for (File file : files) {
+			if (!file.isFile()) continue;
+			String name = file.getName().toLowerCase();
+			if (!name.endsWith("xml")) continue;
+			if (name.contains("lotl")) {
+				lotl += 1;
+			} else if (name.contains("tsl") || name.contains("tl_") || name.contains("_tl_")) {
+				tl += 1;
+			}
+		}
+		return new ProgressCounts(lotl, tl);
+	}
+
+	private static class ProgressCounts {
+		final int lotlCount;
+		final int tlCount;
+		ProgressCounts(int lotlCount, int tlCount) {
+			this.lotlCount = lotlCount;
+			this.tlCount = tlCount;
 		}
 	}
 }

@@ -123,6 +123,18 @@ Defaults (override with env vars):
 
 If the keystore is missing or outdated, the LOTL may show "The trusted list is not well signed!" in reports.
 
+## Trust list cache (avoid re-downloads)
+
+The service caches trusted lists on disk. Set `DSS_TL_CACHE_DIR` to a persistent
+volume path to reuse caches across cold starts.
+
+For Cloud Run, you can mount a GCS bucket:
+
+- `DSS_TL_CACHE_BUCKET` (bucket name, used by `deploy-service.ps1`)
+- `DSS_TL_CACHE_DIR` (mount path, e.g. `/mnt/dss-tsl-cache`)
+
+If no bucket is configured, the cache defaults to `/tmp/dss-tsl-cache` (cleared on cold start).
+
 The [documentation](dss-cookbook/src/main/asciidoc/dss-documentation.adoc) and samples are available in the dss-cookbook module. [SoapUI project](dss-cookbook/src/main/soapui) and [Postman project](dss-cookbook/src/main/postman) are also provided to illustrate SOAP/REST calls.
 
 In order to build the documentation by yourself, the following command must be executed in *dss-cookbook* module:

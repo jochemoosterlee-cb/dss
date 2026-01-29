@@ -9,6 +9,13 @@ public class TrustListStatusResponse {
 	private boolean refreshInProgress;
 	private boolean refreshFailed;
 	private int trustedEntities;
+	private String refreshPhase;
+	private String refreshStartedAt;
+	private String lastProgressAt;
+	private Integer processedLotlCount;
+	private Integer processedTlCount;
+	private Integer totalLotlCountEstimate;
+	private Integer totalTlCountEstimate;
 
 	public String getLotlUrl() {
 		return lotlUrl;
@@ -72,5 +79,61 @@ public class TrustListStatusResponse {
 
 	public void setTrustedEntities(int trustedEntities) {
 		this.trustedEntities = trustedEntities;
+	}
+
+	public String getRefreshPhase() {
+		return refreshPhase;
+	}
+
+	public void setRefreshPhase(String refreshPhase) {
+		this.refreshPhase = refreshPhase;
+	}
+
+	public String getRefreshStartedAt() {
+		return refreshStartedAt;
+	}
+
+	public void setRefreshStartedAt(String refreshStartedAt) {
+		this.refreshStartedAt = refreshStartedAt;
+	}
+
+	public String getLastProgressAt() {
+		return lastProgressAt;
+	}
+
+	public void setLastProgressAt(String lastProgressAt) {
+		this.lastProgressAt = lastProgressAt;
+	}
+
+	public Integer getProcessedLotlCount() {
+		return processedLotlCount;
+	}
+
+	public void setProcessedLotlCount(Integer processedLotlCount) {
+		this.processedLotlCount = processedLotlCount;
+	}
+
+	public Integer getProcessedTlCount() {
+		return processedTlCount;
+	}
+
+	public void setProcessedTlCount(Integer processedTlCount) {
+		this.processedTlCount = processedTlCount;
+	}
+
+	public Integer getTotalLotlCountEstimate() {
+		return totalLotlCountEstimate;
+	}
+
+	public void setTotalLotlCountEstimate(Integer totalLotlCountEstimate) {
+		this.totalLotlCountEstimate = totalLotlCountEstimate;
+	}
+
+	public Integer getTotalTlCountEstimate() {
+		return totalTlCountEstimate;
+	}
+
+	public void setTotalTlCountEstimate(Integer totalTlCountEstimate) {
+		this.totalTlCountEstimate = totalTlCountEstimate;
 	}
 }

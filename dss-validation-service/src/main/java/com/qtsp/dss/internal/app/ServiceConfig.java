@@ -11,12 +11,14 @@ public final class ServiceConfig {
 	private final String ojUrl;
 	private final String lotlKeystoreResource;
 	private final String lotlKeystorePassword;
+	private final String trustListCacheDir;
 	private final boolean trustListRefreshOnStart;
 	private final int trustListRefreshIntervalMinutes;
 
 	private ServiceConfig(int port, int maxUploadBytes, boolean requireAuth, boolean verifyGoogleToken,
 					  String authAudience, String lotlUrl, String nlTlUrl, String ojUrl, String lotlKeystoreResource,
-					  String lotlKeystorePassword, boolean trustListRefreshOnStart, int trustListRefreshIntervalMinutes) {
+					  String lotlKeystorePassword, String trustListCacheDir, boolean trustListRefreshOnStart,
+					  int trustListRefreshIntervalMinutes) {
 		this.port = port;
 		this.maxUploadBytes = maxUploadBytes;
 		this.requireAuth = requireAuth;
@@ -27,6 +29,7 @@ public final class ServiceConfig {
 		this.ojUrl = ojUrl;
 		this.lotlKeystoreResource = lotlKeystoreResource;
 		this.lotlKeystorePassword = lotlKeystorePassword;
+		this.trustListCacheDir = trustListCacheDir;
 		this.trustListRefreshOnStart = trustListRefreshOnStart;
 		this.trustListRefreshIntervalMinutes = trustListRefreshIntervalMinutes;
 	}
@@ -42,10 +45,12 @@ public final class ServiceConfig {
 		String ojUrl = getOrDefault("DSS_OJ_URL", "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=uriserv:OJ.C_.2019.276.01.0001.01.ENG");
 		String lotlKeystoreResource = getOrDefault("DSS_LOTL_KEYSTORE_RESOURCE", "keystore.p12");
 		String lotlKeystorePassword = getOrDefault("DSS_LOTL_KEYSTORE_PASSWORD", "dss-password");
+		String trustListCacheDir = getOrDefault("DSS_TL_CACHE_DIR", "/tmp/dss-tsl-cache");
 		boolean trustListRefreshOnStart = parseBoolean(getEnv("DSS_TRUST_LIST_REFRESH_ON_START"), false);
 		int trustListRefreshIntervalMinutes = parseInt(getEnv("DSS_TRUST_LIST_REFRESH_INTERVAL_MINUTES"), 0);
 		return new ServiceConfig(port, maxUploadBytes, requireAuth, verifyGoogleToken, authAudience, lotlUrl, nlTlUrl,
-				ojUrl, lotlKeystoreResource, lotlKeystorePassword, trustListRefreshOnStart, trustListRefreshIntervalMinutes);
+				ojUrl, lotlKeystoreResource, lotlKeystorePassword, trustListCacheDir,
+				trustListRefreshOnStart, trustListRefreshIntervalMinutes);
 	}
 
 	public int getPort() {
@@ -86,6 +91,10 @@ public final class ServiceConfig {
 
 	public String getLotlKeystorePassword() {
 		return lotlKeystorePassword;
+	}
+
+	public String getTrustListCacheDir() {
+		return trustListCacheDir;
 	}
 
 	public boolean isTrustListRefreshOnStart() {
