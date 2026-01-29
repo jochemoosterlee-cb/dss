@@ -16,6 +16,8 @@ public class TrustListStatusResponse {
 	private Integer processedTlCount;
 	private Integer totalLotlCountEstimate;
 	private Integer totalTlCountEstimate;
+	private Integer refreshFailureCount;
+	private java.util.List<TrustListFailure> refreshFailures;
 
 	public String getLotlUrl() {
 		return lotlUrl;
@@ -135,5 +137,21 @@ public class TrustListStatusResponse {
 
 	public void setTotalTlCountEstimate(Integer totalTlCountEstimate) {
 		this.totalTlCountEstimate = totalTlCountEstimate;
+	}
+
+	public Integer getRefreshFailureCount() {
+		return refreshFailureCount;
+	}
+
+	public void setRefreshFailureCount(Integer refreshFailureCount) {
+		this.refreshFailureCount = refreshFailureCount;
+	}
+
+	public java.util.List<TrustListFailure> getRefreshFailures() {
+		return refreshFailures;
+	}
+
+	public void setRefreshFailures(java.util.List<TrustListFailure> refreshFailures) {
+		this.refreshFailures = refreshFailures;
 	}
 }

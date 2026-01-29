@@ -27,7 +27,7 @@ public class TrustListResource {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response refresh() {
 		PdfValidationService service = AppContext.getValidationService();
-		service.refreshTrustLists();
+		service.refreshTrustListsAsync();
 		TrustListStatusResponse status = service.getTrustListStatus();
 		return Response.ok(status).build();
 	}

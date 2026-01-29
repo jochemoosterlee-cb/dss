@@ -14,11 +14,16 @@ public final class ServiceConfig {
 	private final String trustListCacheDir;
 	private final boolean trustListRefreshOnStart;
 	private final int trustListRefreshIntervalMinutes;
+	private final int trustListHttpTimeoutMs;
+	private final String trustListIgnoreUrls;
+	private final int trustListHttpRetries;
+	private final int trustListHttpRetryBackoffMs;
 
 	private ServiceConfig(int port, int maxUploadBytes, boolean requireAuth, boolean verifyGoogleToken,
 					  String authAudience, String lotlUrl, String nlTlUrl, String ojUrl, String lotlKeystoreResource,
 					  String lotlKeystorePassword, String trustListCacheDir, boolean trustListRefreshOnStart,
-					  int trustListRefreshIntervalMinutes) {
+					  int trustListRefreshIntervalMinutes, int trustListHttpTimeoutMs, String trustListIgnoreUrls,
+					  int trustListHttpRetries, int trustListHttpRetryBackoffMs) {
 		this.port = port;
 		this.maxUploadBytes = maxUploadBytes;
 		this.requireAuth = requireAuth;
@@ -32,6 +37,10 @@ public final class ServiceConfig {
 		this.trustListCacheDir = trustListCacheDir;
 		this.trustListRefreshOnStart = trustListRefreshOnStart;
 		this.trustListRefreshIntervalMinutes = trustListRefreshIntervalMinutes;
+		this.trustListHttpTimeoutMs = trustListHttpTimeoutMs;
+		this.trustListIgnoreUrls = trustListIgnoreUrls;
+		this.trustListHttpRetries = trustListHttpRetries;
+		this.trustListHttpRetryBackoffMs = trustListHttpRetryBackoffMs;
 	}
 
 	public static ServiceConfig fromEnv() {
@@ -48,9 +57,14 @@ public final class ServiceConfig {
 		String trustListCacheDir = getOrDefault("DSS_TL_CACHE_DIR", "/tmp/dss-tsl-cache");
 		boolean trustListRefreshOnStart = parseBoolean(getEnv("DSS_TRUST_LIST_REFRESH_ON_START"), false);
 		int trustListRefreshIntervalMinutes = parseInt(getEnv("DSS_TRUST_LIST_REFRESH_INTERVAL_MINUTES"), 0);
+		int trustListHttpTimeoutMs = parseInt(getEnv("DSS_TL_HTTP_TIMEOUT_MS"), 20000);
+		String trustListIgnoreUrls = getOrDefault("DSS_TL_IGNORE_URLS", "");
+		int trustListHttpRetries = parseInt(getEnv("DSS_TL_HTTP_RETRIES"), 2);
+		int trustListHttpRetryBackoffMs = parseInt(getEnv("DSS_TL_HTTP_RETRY_BACKOFF_MS"), 500);
 		return new ServiceConfig(port, maxUploadBytes, requireAuth, verifyGoogleToken, authAudience, lotlUrl, nlTlUrl,
 				ojUrl, lotlKeystoreResource, lotlKeystorePassword, trustListCacheDir,
-				trustListRefreshOnStart, trustListRefreshIntervalMinutes);
+				trustListRefreshOnStart, trustListRefreshIntervalMinutes, trustListHttpTimeoutMs, trustListIgnoreUrls,
+				trustListHttpRetries, trustListHttpRetryBackoffMs);
 	}
 
 	public int getPort() {
@@ -103,6 +117,22 @@ public final class ServiceConfig {
 
 	public int getTrustListRefreshIntervalMinutes() {
 		return trustListRefreshIntervalMinutes;
+	}
+
+	public int getTrustListHttpTimeoutMs() {
+		return trustListHttpTimeoutMs;
+	}
+
+	public String getTrustListIgnoreUrls() {
+		return trustListIgnoreUrls;
+	}
+
+	public int getTrustListHttpRetries() {
+		return trustListHttpRetries;
+	}
+
+	public int getTrustListHttpRetryBackoffMs() {
+		return trustListHttpRetryBackoffMs;
 	}
 
 	private static String getEnv(String name) {

@@ -128,9 +128,14 @@ public class TLValidationJob {
     private List<Alert<LOTLInfo>> lotlAlerts;
 	
 	/**
-     * List of TL info alerts
-     */
+	 * List of TL info alerts
+	 */
     private List<Alert<TLInfo>> tlAlerts;
+
+	/**
+	 * Progress listener (optional)
+	 */
+	private ProgressListener progressListener;
 
 	/**
 	 * Default constructor instantiating object with null configuration
@@ -246,6 +251,15 @@ public class TLValidationJob {
 	}
 
 	/**
+	 * Sets a progress listener to observe LOTL/TL analysis completion.
+	 *
+	 * @param progressListener listener implementation
+	 */
+	public void setProgressListener(ProgressListener progressListener) {
+		this.progressListener = progressListener;
+	}
+
+	/**
 	 * Returns validation job summary for all processed LOTL / TLs
 	 * @return {@link TLValidationJobSummary}
 	 */
@@ -327,6 +341,9 @@ public class TLValidationJob {
 		int nbLOTLSources = lotlSources.size();
 
 		LOG.info("Running analysis for {} LOTLSource(s)", nbLOTLSources);
+		if (progressListener != null) {
+			progressListener.onLotlStarted(nbLOTLSources);
+		}
 
 		Map<CacheKey, ParsingCacheDTO> oldParsingValues = extractParsingCache(lotlSources);
 
@@ -334,9 +351,19 @@ public class TLValidationJob {
 		for (LOTLSource lotlSource : lotlSources) {
 			final CacheAccessByKey cacheAccess = cacheAccessFactory.getCacheAccess(lotlSource.getCacheKey());
 			if (lotlSource.isPivotSupport()) {
-				executorService.submit(new LOTLWithPivotsAnalysis(lotlSource, cacheAccess, dssFileLoader, cacheAccessFactory, latch));
+				executorService.submit(() -> {
+					new LOTLWithPivotsAnalysis(lotlSource, cacheAccess, dssFileLoader, cacheAccessFactory, latch).run();
+					if (progressListener != null) {
+						progressListener.onLotlDone(lotlSource);
+					}
+				});
 			} else {
-				executorService.submit(new LOTLAnalysis(lotlSource, cacheAccess, dssFileLoader, latch));
+				executorService.submit(() -> {
+					new LOTLAnalysis(lotlSource, cacheAccess, dssFileLoader, latch).run();
+					if (progressListener != null) {
+						progressListener.onLotlDone(lotlSource);
+					}
+				});
 			}
 		}
 
@@ -375,11 +402,19 @@ public class TLValidationJob {
 		checkNoDuplicateUrls(tlSources);
 
 		LOG.info("Running analysis for {} TLSource(s)", nbTLSources);
+		if (progressListener != null) {
+			progressListener.onTlStarted(nbTLSources);
+		}
 
 		CountDownLatch latch = new CountDownLatch(nbTLSources);
 		for (TLSource tlSource : tlSources) {
 			final CacheAccessByKey cacheAccess = cacheAccessFactory.getCacheAccess(tlSource.getCacheKey());
-			executorService.submit(new TLAnalysis(tlSource, cacheAccess, dssFileLoader, latch));
+			executorService.submit(() -> {
+				new TLAnalysis(tlSource, cacheAccess, dssFileLoader, latch).run();
+				if (progressListener != null) {
+					progressListener.onTlDone(tlSource);
+				}
+			});
 		}
 
 		try {
@@ -430,6 +465,16 @@ public class TLValidationJob {
 		if (allUrls.size() > uniqueUrls.size()) {
 			throw new DSSException(String.format("Duplicate urls found : %s", allUrls));
 		}
+	}
+
+	/**
+	 * Progress callbacks for LOTL/TL analysis.
+	 */
+	public interface ProgressListener {
+		void onLotlStarted(int total);
+		void onLotlDone(LOTLSource source);
+		void onTlStarted(int total);
+		void onTlDone(TLSource source);
 	}
 
 }
